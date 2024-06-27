@@ -57,6 +57,7 @@ macro_rules! impl_jellyfish_tests_for_hasher {
             instantiate_test_for_hasher!(test_1000_versions, $hasher);
             instantiate_test_for_hasher!(test_delete_then_get_in_one, $hasher);
             instantiate_test_for_hasher!(test_two_gets_then_delete, $hasher);
+            instantiate_test_for_hasher!(test_delete_multiple_same_batch, $hasher);
 
 
             proptest! {
@@ -783,6 +784,44 @@ fn test_two_gets_then_delete<H: SimpleHasher>() {
         .put_value_set(vec![(key1, None)], 0 /* version */)
         .unwrap();
     db.write_tree_update_batch(batch).unwrap();
+}
+
+fn test_delete_multiple_same_batch<H: SimpleHasher>() {
+    let db = MockTreeStore::new(true);
+    let tree = JellyfishMerkleTree::<_, H>::new(&db);
+
+    let key1: KeyHash = KeyHash([1; 32]);
+    let key2: KeyHash = KeyHash([2; 32]);
+    let key3: KeyHash = KeyHash([3; 32]);
+
+    let value = "".to_string().into_bytes();
+
+    // Add 3 keys
+    let (_root, batch) = tree
+        .put_value_set(
+            vec![
+                (key1, Some(value.clone())),
+                (key3, Some(value.clone())),
+                (key2, Some(value.clone())),
+            ],
+            0, /* version */
+        )
+        .unwrap();
+    db.write_tree_update_batch(batch).unwrap();
+
+    db.get_value(0, key1).unwrap();
+    db.get_value(0, key2).unwrap();
+    db.get_value(0, key3).unwrap();
+
+    // Remove 2 keys
+    let (_root, batch) = tree
+        .put_value_set(vec![(key1, None), (key2, None)], 0 /* version */)
+        .unwrap();
+    db.write_tree_update_batch(batch).unwrap();
+
+    assert!(db.get_value_option(0, key1).unwrap().is_none());
+    assert!(db.get_value_option(0, key2).unwrap().is_none());
+    db.get_value(0, key3).unwrap();
 }
 
 // Implement the test suite for sha256
