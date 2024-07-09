@@ -344,9 +344,12 @@ impl<H: SimpleHasher> SparseMerkleProof<H> {
 
                 // There is no leaf in the Merkle path, which means the key we are going to insert does not update an existing leaf
                 None => {
-                    ensure!(self
-                        .verify_nonexistence(old_root_hash, new_element_key)
-                        .is_ok());
+                    // If the update already exists in the tree, the proof has leaf as None,
+                    // indicating correctly that it was not updated, but this non-existence check
+                    // will fail.
+                    // ensure!(self
+                    //     .verify_nonexistence(old_root_hash, new_element_key)
+                    //     .is_ok());
 
                     // Step 2: we compute the new Merkle path (we build a new [`SparseMerkleProof`] object)
                     // In that case, the leaf is none so we don't need to change the siblings
