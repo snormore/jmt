@@ -8,6 +8,7 @@ use core::{cmp::Ordering, convert::TryInto};
 use hashbrown::HashMap;
 #[cfg(feature = "std")]
 use std::collections::HashMap;
+use tracing::trace_span;
 
 use crate::proof::definition::UpdateMerkleProof;
 use crate::proof::{SparseMerkleLeafNode, SparseMerkleNode};
@@ -422,6 +423,9 @@ where
         value_sets: impl IntoIterator<Item = impl IntoIterator<Item = (KeyHash, Option<OwnedValue>)>>,
         first_version: Version,
     ) -> Result<(Vec<RootHash>, TreeUpdateBatch)> {
+        let span = trace_span!("jmt.put_value_sets");
+        let _enter = span.enter();
+
         let mut tree_cache = TreeCache::new(self.reader, first_version)?;
         for (idx, value_set) in value_sets.into_iter().enumerate() {
             let version = first_version + idx as u64;
@@ -532,6 +536,9 @@ where
         tree_cache: &mut TreeCache<R>,
         with_proof: bool,
     ) -> Result<Option<SparseMerkleProof<H>>> {
+        let span = trace_span!("jmt.put");
+        let _enter = span.enter();
+
         // tree_cache.ensure_initialized()?;
 
         let nibble_path = NibblePath::new(key.0.to_vec());
@@ -582,6 +589,9 @@ where
         tree_cache: &mut TreeCache<R>,
         with_proof: bool,
     ) -> Result<(PutResult<(NodeKey, Node)>, Option<SparseMerkleProof<H>>)> {
+        let span = trace_span!("jmt.insert_at");
+        let _enter = span.enter();
+
         // Because deletions could cause the root node not to exist, we try to get the root node,
         // and if it doesn't exist, we synthesize a `Null` node, noting that it hasn't yet been
         // committed anywhere (we need to track this because the tree cache will panic if we try to
